@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crab Pot Christmas Trees - Customer Geography Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --ocean-deep: #0a1628;
+      --ocean-mid: #1a3a5c;
+      --sand: #f4efe6;
+      --coral: #e85d4c;
+      --seafoam: #3eb489;
+      --gold: #d4a853;
+      --text-primary: #1a1a1a;
+      --text-secondary: #5a5a5a;
+    }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--sand);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--ocean-deep) 0%, var(--ocean-mid) 100%);
+      color: white;
+      padding: 2rem 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(62, 180, 137, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    
+    .header h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      position: relative;
+    }
+    
+    .header p {
+      opacity: 0.8;
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+    }
+    
+    .stats-bar {
+      display: flex;
+      gap: 3rem;
+      padding: 1.5rem 3rem;
+      background: white;
+      border-bottom: 1px solid #e5e5e5;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ocean-deep);
+      font-family: 'Instrument Serif', serif;
+    }
+    
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      height: calc(100vh - 180px);
+    }
+    
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    
+    .sidebar {
+      background: white;
+      overflow-y: auto;
+      border-left: 1px solid #e5e5e5;
+    }
+    
+    .sidebar-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .sidebar-section h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.3rem;
+      font-weight: 400;
+      margin-bottom: 1rem;
+      color: var(--ocean-deep);
+    }
+    
+    .insight-card {
+      background: linear-gradient(135deg, #f8f6f3 0%, #fff 100%);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e8e5e0;
+    }
+    
+    .insight-card h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--coral);
+      margin-bottom: 0.5rem;
+    }
+    
+    .insight-card p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+    
+    .insight-card .highlight {
+      font-weight: 600;
+      color: var(--ocean-deep);
+    }
+    
+    .top-cities {
+      list-style: none;
+    }
+    
+    .top-cities li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .top-cities li:last-child {
+      border-bottom: none;
+    }
+    
+    .city-name {
+      font-weight: 500;
+    }
+    
+    .city-count {
+      background: var(--ocean-deep);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .state-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .state-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .state-bar .label {
+      width: 30px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .state-bar .bar-container {
+      flex: 1;
+      height: 24px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .state-bar .bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    
+    .state-bar .count {
+      width: 50px;
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .legend {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+    
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .leaflet-popup-content {
+      margin: 16px 20px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    
+    .popup-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.2rem;
+      color: var(--ocean-deep);
+      margin-bottom: 0.5rem;
+    }
+    
+    .popup-count {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--coral);
+    }
+    
+    .popup-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    @media (max-width: 900px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: 50vh auto;
+      }
+      
+      .sidebar {
+        border-left: none;
+        border-top: 1px solid #e5e5e5;
+      }
+    }
+    
+    .upload-btn, .clear-btn, .help-btn {
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    
+    .upload-btn {
+      background: var(--seafoam);
+      color: white;
+      border: none;
+      display: inline-block;
+    }
+    
+    .upload-btn:hover {
+      background: #35a07a;
+    }
+    
+    .clear-btn {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    
+    .clear-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: white;
+    }
+    
+    .help-btn {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    
+    .help-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: white;
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    
+    .modal-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      margin: 1rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .modal h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.5rem;
+      color: var(--ocean-deep);
+      margin-bottom: 1rem;
+    }
+    
+    .modal h3 {
+      font-size: 1rem;
+      color: var(--ocean-deep);
+      margin: 1.25rem 0 0.5rem;
+    }
+    
+    .modal p, .modal li {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+    
+    .modal ul {
+      margin-left: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .modal code {
+      background: #f0f0f0;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .modal pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0.75rem 0;
+    }
+    
+    .modal-close {
+      background: var(--ocean-deep);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    
+    .modal-close:hover {
+      background: var(--ocean-mid);
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    
+    .loading-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .loading-spinner {
+      text-align: center;
+    }
+    
+    .loading-spinner::before {
+      content: '';
+      display: block;
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: var(--seafoam);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1>Customer Geography Dashboard</h1>
+        <p>Crab Pot Christmas Trees — <span id="customerCount">8,490</span> Customers Across America</p>
+      </div>
+      <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <label for="fileUpload" class="upload-btn">
+          📁 Upload New Data
+          <input type="file" id="fileUpload" accept=".csv,.xlsx,.xls" style="display: none;">
+        </label>
+        <button id="clearData" class="clear-btn">🗑️ Clear Data</button>
+        <button id="formatHelp" class="help-btn">❓ Format Help</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-value">8,490</span>
+      <span class="stat-label">Total Customers</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">48%</span>
+      <span class="stat-label">North Carolina</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">71%</span>
+      <span class="stat-label">Southeast Region</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">49</span>
+      <span class="stat-label">States + DC</span>
+    </div>
+  </div>
+  
+  <div class="main-content">
+    <div id="map"></div>
+    
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h2>🎯 Key Insights</h2>
+        <div id="keyInsights">
+          <div class="insight-card">
+            <h3>Top Market</h3>
+            <p><span class="highlight">Raleigh alone has 382 customers</span> — your single largest market. The Triangle region accounts for 20% of NC sales.</p>
+          </div>
+          
+          <div class="insight-card">
+            <h3>Home State Dominance</h3>
+            <p><span class="highlight">North Carolina represents 48%</span> of your total customer base with 4,068 customers.</p>
+          </div>
+          
+          <div class="insight-card">
+            <h3>Regional Concentration</h3>
+            <p><span class="highlight">71% of customers</span> are in the Southeast region (NC, VA, SC, FL, GA, TN, AL, MS, LA).</p>
+          </div>
+          
+          <div class="insight-card">
+            <h3>Geographic Reach</h3>
+            <p>You have customers in <span class="highlight">49 states + DC</span>. Only North Dakota has zero customers.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h2>📍 Top 10 Cities</h2>
+        <ul class="top-cities">
+          <li><span class="city-name">Raleigh, NC</span><span class="city-count">382</span></li>
+          <li><span class="city-name">Wilmington, NC</span><span class="city-count">207</span></li>
+          <li><span class="city-name">New Bern, NC</span><span class="city-count">167</span></li>
+          <li><span class="city-name">Beaufort, NC</span><span class="city-count">119</span></li>
+          <li><span class="city-name">Morehead City, NC</span><span class="city-count">119</span></li>
+          <li><span class="city-name">Newport, NC</span><span class="city-count">119</span></li>
+          <li><span class="city-name">Greenville, NC</span><span class="city-count">103</span></li>
+          <li><span class="city-name">Charlotte, NC</span><span class="city-count">79</span></li>
+          <li><span class="city-name">Virginia Beach, VA</span><span class="city-count">76</span></li>
+          <li><span class="city-name">Chapel Hill, NC</span><span class="city-count">73</span></li>
+        </ul>
+      </div>
+      
+      <div class="sidebar-section">
+        <h2>📊 Top States</h2>
+        <div class="state-bars">
+          <div class="state-bar">
+            <span class="label">NC</span>
+            <div class="bar-container">
+              <div class="bar" style="width: 100%; background: var(--ocean-deep);"></div>
+            </div>
+            <span class="count">4,068</span>
+          </div>
+          <div class="state-bar">
+            <span class="label">VA</span>
+            <div class="bar-container">
+              <div class="bar" style="width: 20.3%; background: var(--ocean-mid);"></div>
+            </div>
+            <span class="count">826</span>
+          </div>
+          <div class="state-bar">
+            <span class="label">MD</span>
+            <div class="bar-container">
+              <div class="bar" style="width: 11.8%; background: var(--seafoam);"></div>
+            </div>
+            <span class="count">482</span>
+          </div>
+          <div class="state-bar">
+            <span class="label">FL</span>
+            <div class="bar-container">
+              <div class="bar" style="width: 10.1%; background: var(--coral);"></div>
+            </div>
+            <span class="count">410</span>
+          </div>
+          <div class="state-bar">
+            <span class="label">SC</span>
+            <div class="bar-container">
+              <div class="bar" style="width: 8.6%; background: var(--gold);"></div>
+            </div>
+            <span class="count">348</span>
+          </div>
+        </div>
+        
+        <div class="legend" style="margin-top: 1.5rem;">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--coral);"></div>
+            <span>500+ customers</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--gold);"></div>
+            <span>100-499</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--seafoam);"></div>
+            <span>50-99</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--ocean-mid);"></div>
+            <span>20-49</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #6b7c8a;"></div>
+            <span>1-19</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h2>💡 Growth Opportunities</h2>
+        <div id="growthOpportunities">
+          <div class="insight-card">
+            <h3>Expand in Top State</h3>
+            <p>Your #1 state <span class="highlight">NC has 4,068 customers</span>. Consider targeting nearby cities to strengthen this base.</p>
+          </div>
+          
+          <div class="insight-card">
+            <h3>Secondary Markets</h3>
+            <p><span class="highlight">VA (826) and MD (482)</span> show strong demand. These neighboring states are prime expansion targets.</p>
+          </div>
+          
+          <div class="insight-card">
+            <h3>Untapped Regions</h3>
+            <p>States with fewer than 10 customers represent growth potential. Consider targeted marketing campaigns.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Format Help Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2>📋 Data Format Requirements</h2>
+      <p>Upload a <strong>CSV</strong> or <strong>Excel (.xlsx/.xls)</strong> file with your customer data.</p>
+      
+      <h3>Required Columns</h3>
+      <p>Your file must have these columns (in any order):</p>
+      <ul>
+        <li><code>Customer</code> or <code>Name</code> — Customer name</li>
+        <li><code>City</code> — City name</li>
+        <li><code>State</code> — 2-letter state code (e.g., NC, VA, FL)</li>
+      </ul>
+      
+      <h3>Optional Column</h3>
+      <ul>
+        <li><code>Zip</code> — ZIP code (not used for mapping, but preserved)</li>
+      </ul>
+      
+      <h3>Example CSV Format</h3>
+      <pre>Customer,City,State,Zip
+John Smith,Raleigh,NC,27601
+Jane Doe,Virginia Beach,VA,23451
+Bob Wilson,Charlotte,NC,28202</pre>
+      
+      <h3>Notes</h3>
+      <ul>
+        <li>The first row must be column headers</li>
+        <li>State codes should be 2-letter abbreviations (NC, not North Carolina)</li>
+        <li>City names should match common spellings</li>
+        <li>~200 major US cities are mapped to coordinates; others aggregate to state level</li>
+      </ul>
+      
+      <button class="modal-close" id="closeModal">Got it!</button>
+    </div>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">Processing your data...</div>
+  </div>
+  
+  <script>
+    function initMap() {
+      // City coordinates lookup (major US cities)
+      var cityCoords = {
+        // NC - Crystal Coast & Eastern
+        'MOREHEAD CITY,NC': [34.7234, -76.7260],
+        'BEAUFORT,NC': [34.7193, -76.6638],
+        'ATLANTIC BEACH,NC': [34.6988, -76.7405],
+        'EMERALD ISLE,NC': [34.6649, -76.9502],
+        'NEWPORT,NC': [34.7868, -76.8587],
+        'PINE KNOLL SHORES,NC': [34.6951, -76.8171],
+        'NEW BERN,NC': [35.1085, -77.0441],
+        'HAVELOCK,NC': [34.8790, -76.9013],
+        'JACKSONVILLE,NC': [34.7541, -77.4303],
+        'SWANSBORO,NC': [34.6879, -77.1191],
+        'SNEADS FERRY,NC': [34.5521, -77.3973],
+        'HOLLY RIDGE,NC': [34.4954, -77.5545],
+        'HAMPSTEAD,NC': [34.3657, -77.7107],
+        'SURF CITY,NC': [34.4271, -77.5460],
+        'WILMINGTON,NC': [34.2257, -77.9447],
+        'WRIGHTSVILLE BEACH,NC': [34.2085, -77.7964],
+        'CAROLINA BEACH,NC': [34.0352, -77.8936],
+        'SOUTHPORT,NC': [33.9215, -78.0198],
+        'OAK ISLAND,NC': [33.9146, -78.1128],
+        'LELAND,NC': [34.2559, -78.0453],
+        'RALEIGH,NC': [35.7796, -78.6382],
+        'DURHAM,NC': [35.9940, -78.8986],
+        'CHAPEL HILL,NC': [35.9132, -79.0558],
+        'CARY,NC': [35.7915, -78.7811],
+        'WAKE FOREST,NC': [35.9799, -78.5097],
+        'APEX,NC': [35.7327, -78.8503],
+        'CLAYTON,NC': [35.6507, -78.4564],
+        'GARNER,NC': [35.7113, -78.6142],
+        'FUQUAY VARINA,NC': [35.5843, -78.8000],
+        'HOLLY SPRINGS,NC': [35.6513, -78.8336],
+        'KNIGHTDALE,NC': [35.7879, -78.4806],
+        'MORRISVILLE,NC': [35.8235, -78.8256],
+        'GREENVILLE,NC': [35.6127, -77.3664],
+        'WILSON,NC': [35.7212, -77.9156],
+        'ROCKY MOUNT,NC': [35.9382, -77.7905],
+        'GOLDSBORO,NC': [35.3849, -77.9928],
+        'KINSTON,NC': [35.2627, -77.5816],
+        'WASHINGTON,NC': [35.5466, -77.0522],
+        'CHARLOTTE,NC': [35.2271, -80.8431],
+        'GREENSBORO,NC': [36.0726, -79.7920],
+        'WINSTON SALEM,NC': [36.0999, -80.2442],
+        'WINTERVILLE,NC': [35.5293, -77.4003],
+        'FAYETTEVILLE,NC': [35.0527, -78.8784],
+        'HILLSBOROUGH,NC': [36.0754, -79.0978],
+        'SANFORD,NC': [35.4799, -79.1803],
+        'ELIZABETH CITY,NC': [36.2946, -76.2510],
+        'MANTEO,NC': [35.9082, -75.6757],
+        'KILL DEVIL HILLS,NC': [36.0307, -75.6760],
+        'NAGS HEAD,NC': [35.9574, -75.6241],
+        'KITTY HAWK,NC': [36.0646, -75.7057],
+        // VA
+        'VIRGINIA BEACH,VA': [36.8529, -75.9780],
+        'RICHMOND,VA': [37.5407, -77.4360],
+        'CHESAPEAKE,VA': [36.7682, -76.2875],
+        'NORFOLK,VA': [36.8508, -76.2859],
+        'NEWPORT NEWS,VA': [37.0871, -76.4730],
+        'ARLINGTON,VA': [38.8799, -77.1068],
+        'ALEXANDRIA,VA': [38.8048, -77.0469],
+        'ROANOKE,VA': [37.2710, -79.9414],
+        'HAMPTON,VA': [37.0299, -76.3452],
+        'LYNCHBURG,VA': [37.4138, -79.1422],
+        'FREDERICKSBURG,VA': [38.3032, -77.4605],
+        // MD
+        'EASTON,MD': [38.7743, -76.0763],
+        'ANNAPOLIS,MD': [38.9784, -76.4922],
+        'BALTIMORE,MD': [39.2904, -76.6122],
+        'BETHESDA,MD': [38.9847, -77.0947],
+        'OCEAN CITY,MD': [38.3365, -75.0849],
+        'SALISBURY,MD': [38.3607, -75.5994],
+        'ROCKVILLE,MD': [39.0840, -77.1528],
+        'COLUMBIA,MD': [39.2037, -76.8610],
+        // SC
+        'MOUNT PLEASANT,SC': [32.8323, -79.8284],
+        'CHARLESTON,SC': [32.7765, -79.9311],
+        'MYRTLE BEACH,SC': [33.6891, -78.8867],
+        'COLUMBIA,SC': [34.0007, -81.0348],
+        'GREENVILLE,SC': [34.8526, -82.3940],
+        'SURFSIDE BEACH,SC': [33.6060, -78.9728],
+        'HILTON HEAD ISLAND,SC': [32.2163, -80.7526],
+        'NORTH CHARLESTON,SC': [32.8546, -79.9748],
+        // FL
+        'JACKSONVILLE,FL': [30.3322, -81.6557],
+        'MIAMI,FL': [25.7617, -80.1918],
+        'ORLANDO,FL': [28.5383, -81.3792],
+        'TAMPA,FL': [27.9506, -82.4572],
+        'NAPLES,FL': [26.1420, -81.7948],
+        'SANIBEL,FL': [26.4489, -82.0224],
+        'FORT LAUDERDALE,FL': [26.1224, -80.1373],
+        'SARASOTA,FL': [27.3364, -82.5307],
+        'ST AUGUSTINE,FL': [29.8946, -81.3145],
+        'WEST PALM BEACH,FL': [26.7153, -80.0534],
+        'CLEARWATER,FL': [27.9659, -82.8001],
+        'ST PETERSBURG,FL': [27.7676, -82.6403],
+        'PENSACOLA,FL': [30.4213, -87.2169],
+        // GA
+        'ATLANTA,GA': [33.7490, -84.3880],
+        'SAVANNAH,GA': [32.0809, -81.0912],
+        'AUGUSTA,GA': [33.4735, -81.9748],
+        'ATHENS,GA': [33.9519, -83.3576],
+        // Other major cities
+        'NEW YORK,NY': [40.7128, -74.0060],
+        'BROOKLYN,NY': [40.6782, -73.9442],
+        'BOSTON,MA': [42.3601, -71.0589],
+        'CAMBRIDGE,MA': [42.3736, -71.1097],
+        'WASHINGTON,DC': [38.9072, -77.0369],
+        'PHILADELPHIA,PA': [39.9526, -75.1652],
+        'PITTSBURGH,PA': [40.4406, -79.9959],
+        'DALLAS,TX': [32.7767, -96.7970],
+        'HOUSTON,TX': [29.7604, -95.3698],
+        'AUSTIN,TX': [30.2672, -97.7431],
+        'SAN ANTONIO,TX': [29.4241, -98.4936],
+        'DENVER,CO': [39.7392, -104.9903],
+        'SEATTLE,WA': [47.6062, -122.3321],
+        'PORTLAND,OR': [45.5051, -122.6750],
+        'SAN FRANCISCO,CA': [37.7749, -122.4194],
+        'LOS ANGELES,CA': [34.0522, -118.2437],
+        'SAN DIEGO,CA': [32.7157, -117.1611],
+        'CHICAGO,IL': [41.8781, -87.6298],
+        'DETROIT,MI': [42.3314, -83.0458],
+        'CLEVELAND,OH': [41.4993, -81.6944],
+        'COLUMBUS,OH': [39.9612, -82.9988],
+        'CINCINNATI,OH': [39.1031, -84.5120],
+        'NASHVILLE,TN': [36.1627, -86.7816],
+        'MEMPHIS,TN': [35.1495, -90.0490],
+        'BIRMINGHAM,AL': [33.5186, -86.8104],
+        'PHOENIX,AZ': [33.4484, -112.0740],
+        'LAS VEGAS,NV': [36.1699, -115.1398],
+        'MINNEAPOLIS,MN': [44.9778, -93.2650],
+        'ST LOUIS,MO': [38.6270, -90.1994],
+        'KANSAS CITY,MO': [39.0997, -94.5786],
+        'NEW ORLEANS,LA': [29.9511, -90.0715],
+        'INDIANAPOLIS,IN': [39.7684, -86.1581],
+        'MILWAUKEE,WI': [43.0389, -87.9065],
+        'SALT LAKE CITY,UT': [40.7608, -111.8910],
+        'ALBUQUERQUE,NM': [35.0844, -106.6504],
+        'PORTLAND,ME': [43.6591, -70.2568],
+        'PROVIDENCE,RI': [41.8240, -71.4128],
+        'HARTFORD,CT': [41.7658, -72.6734],
+        'NEWARK,NJ': [40.7357, -74.1724],
+        'BUFFALO,NY': [42.8864, -78.8784],
+        'ROCHESTER,NY': [43.1566, -77.6088],
+        'ALBANY,NY': [42.6526, -73.7562],
+        'LOUISVILLE,KY': [38.2527, -85.7585],
+        'OKLAHOMA CITY,OK': [35.4676, -97.5164],
+        'TULSA,OK': [36.1540, -95.9928],
+        'OMAHA,NE': [41.2565, -95.9345],
+        'BOISE,ID': [43.6150, -116.2023],
+        'ANCHORAGE,AK': [61.2181, -149.9003],
+        'HONOLULU,HI': [21.3069, -157.8583]
+      };
+      
+      // State centroids for fallback
+      var stateCoords = {
+        'NC': [35.5, -79.5], 'VA': [37.5, -78.8], 'MD': [39.0, -76.7],
+        'FL': [28.5, -82.5], 'SC': [33.8, -80.9], 'PA': [40.9, -77.8],
+        'TX': [31.5, -99.5], 'CA': [37.2, -119.5], 'GA': [32.6, -83.4],
+        'NY': [42.9, -75.5], 'MA': [42.2, -71.5], 'NJ': [40.1, -74.7],
+        'OH': [40.4, -82.7], 'IL': [40.0, -89.2], 'MI': [44.3, -85.5],
+        'TN': [35.8, -86.3], 'CT': [41.6, -72.7], 'WA': [47.4, -120.5],
+        'AL': [32.7, -86.8], 'DE': [39.0, -75.5], 'CO': [39.0, -105.5],
+        'IN': [39.9, -86.3], 'WI': [44.5, -89.8], 'AZ': [34.2, -111.6],
+        'MO': [38.3, -92.5], 'LA': [31.0, -92.0], 'OR': [43.9, -120.5],
+        'MN': [46.0, -94.5], 'MS': [32.7, -89.7], 'ME': [45.3, -69.0],
+        'KS': [38.5, -98.4], 'NH': [43.7, -71.5], 'RI': [41.7, -71.5],
+        'OK': [35.5, -97.5], 'KY': [37.8, -85.7], 'DC': [38.9, -77.0],
+        'NV': [39.3, -116.6], 'WV': [38.9, -80.5], 'IA': [42.0, -93.5],
+        'UT': [39.3, -111.7], 'VT': [44.0, -72.7], 'ID': [44.4, -114.6],
+        'NE': [41.5, -99.8], 'AK': [64.0, -153.0], 'NM': [34.5, -106.0],
+        'AR': [34.8, -92.4], 'WY': [43.0, -107.5], 'HI': [20.8, -156.3],
+        'MT': [46.9, -110.4], 'SD': [44.5, -100.0], 'ND': [47.5, -100.5]
+      };
+      
+      var stateNames = {
+        'NC': 'North Carolina', 'VA': 'Virginia', 'MD': 'Maryland',
+        'FL': 'Florida', 'SC': 'South Carolina', 'PA': 'Pennsylvania',
+        'TX': 'Texas', 'CA': 'California', 'GA': 'Georgia',
+        'NY': 'New York', 'MA': 'Massachusetts', 'NJ': 'New Jersey',
+        'OH': 'Ohio', 'IL': 'Illinois', 'MI': 'Michigan',
+        'TN': 'Tennessee', 'CT': 'Connecticut', 'WA': 'Washington',
+        'AL': 'Alabama', 'DE': 'Delaware', 'CO': 'Colorado',
+        'IN': 'Indiana', 'WI': 'Wisconsin', 'AZ': 'Arizona',
+        'MO': 'Missouri', 'LA': 'Louisiana', 'OR': 'Oregon',
+        'MN': 'Minnesota', 'MS': 'Mississippi', 'ME': 'Maine',
+        'KS': 'Kansas', 'NH': 'New Hampshire', 'RI': 'Rhode Island',
+        'OK': 'Oklahoma', 'KY': 'Kentucky', 'DC': 'Washington DC',
+        'NV': 'Nevada', 'WV': 'West Virginia', 'IA': 'Iowa',
+        'UT': 'Utah', 'VT': 'Vermont', 'ID': 'Idaho',
+        'NE': 'Nebraska', 'AK': 'Alaska', 'NM': 'New Mexico',
+        'AR': 'Arkansas', 'WY': 'Wyoming', 'HI': 'Hawaii',
+        'MT': 'Montana', 'SD': 'South Dakota', 'ND': 'North Dakota'
+      };
+      
+      // Track all markers for clearing
+      var allMarkers = [];
+      var crystalCoastRect = null;
+      // Customer location data
+      var customerLocations = [
+      {city: "Raleigh", state: "NC", count: 382, lat: 35.7796, lng: -78.6382},
+      {city: "Wilmington", state: "NC", count: 207, lat: 34.2257, lng: -77.9447},
+      {city: "New Bern", state: "NC", count: 167, lat: 35.1085, lng: -77.0441},
+      {city: "Beaufort", state: "NC", count: 119, lat: 34.7193, lng: -76.6638},
+      {city: "Morehead City", state: "NC", count: 119, lat: 34.7234, lng: -76.7260},
+      {city: "Newport", state: "NC", count: 119, lat: 34.7868, lng: -76.8587},
+      {city: "Greenville", state: "NC", count: 103, lat: 35.6127, lng: -77.3664},
+      {city: "Charlotte", state: "NC", count: 79, lat: 35.2271, lng: -80.8431},
+      {city: "Virginia Beach", state: "VA", count: 76, lat: 36.8529, lng: -75.9780},
+      {city: "Chapel Hill", state: "NC", count: 73, lat: 35.9132, lng: -79.0558},
+      {city: "Cary", state: "NC", count: 67, lat: 35.7915, lng: -78.7811},
+      {city: "Durham", state: "NC", count: 67, lat: 35.9940, lng: -78.8986},
+      {city: "Greensboro", state: "NC", count: 67, lat: 36.0726, lng: -79.7920},
+      {city: "Richmond", state: "VA", count: 61, lat: 37.5407, lng: -77.4360},
+      {city: "Wake Forest", state: "NC", count: 53, lat: 35.9799, lng: -78.5097},
+      {city: "Winston Salem", state: "NC", count: 50, lat: 36.0999, lng: -80.2442},
+      {city: "Emerald Isle", state: "NC", count: 46, lat: 34.6649, lng: -76.9502},
+      {city: "Hampstead", state: "NC", count: 45, lat: 34.3657, lng: -77.7107},
+      {city: "Southport", state: "NC", count: 45, lat: 33.9215, lng: -78.0198},
+      {city: "Jacksonville", state: "NC", count: 44, lat: 34.7541, lng: -77.4303},
+      {city: "Winterville", state: "NC", count: 41, lat: 35.5293, lng: -77.4003},
+      {city: "Apex", state: "NC", count: 40, lat: 35.7327, lng: -78.8503},
+      {city: "Easton", state: "MD", count: 39, lat: 38.7743, lng: -76.0763},
+      {city: "Swansboro", state: "NC", count: 38, lat: 34.6879, lng: -77.1191},
+      {city: "Havelock", state: "NC", count: 38, lat: 34.8790, lng: -76.9013},
+      {city: "Chesapeake", state: "VA", count: 36, lat: 36.7682, lng: -76.2875},
+      {city: "Wilson", state: "NC", count: 35, lat: 35.7212, lng: -77.9156},
+      {city: "Fayetteville", state: "NC", count: 33, lat: 35.0527, lng: -78.8784},
+      {city: "Clayton", state: "NC", count: 32, lat: 35.6507, lng: -78.4564},
+      {city: "Rocky Mount", state: "NC", count: 32, lat: 35.9382, lng: -77.7905},
+      {city: "Washington", state: "NC", count: 29, lat: 35.5466, lng: -77.0522},
+      {city: "Norfolk", state: "VA", count: 28, lat: 36.8508, lng: -76.2859},
+      {city: "Kinston", state: "NC", count: 28, lat: 35.2627, lng: -77.5816},
+      {city: "Leland", state: "NC", count: 28, lat: 34.2559, lng: -78.0453},
+      {city: "Mount Pleasant", state: "SC", count: 27, lat: 32.8323, lng: -79.8284},
+      {city: "Goldsboro", state: "NC", count: 27, lat: 35.3849, lng: -77.9928},
+      {city: "Annapolis", state: "MD", count: 27, lat: 38.9784, lng: -76.4922},
+      {city: "Arlington", state: "VA", count: 26, lat: 38.8799, lng: -77.1068},
+      {city: "Manteo", state: "NC", count: 25, lat: 35.9082, lng: -75.6757},
+      {city: "Elizabeth City", state: "NC", count: 25, lat: 36.2946, lng: -76.2510},
+      {city: "Charleston", state: "SC", count: 25, lat: 32.7765, lng: -79.9311},
+      {city: "Alexandria", state: "VA", count: 24, lat: 38.8048, lng: -77.0469},
+      {city: "Myrtle Beach", state: "SC", count: 23, lat: 33.6891, lng: -78.8867},
+      {city: "Atlantic Beach", state: "NC", count: 23, lat: 34.6988, lng: -76.7405},
+      {city: "Garner", state: "NC", count: 22, lat: 35.7113, lng: -78.6142},
+      {city: "Newport News", state: "VA", count: 21, lat: 37.0871, lng: -76.4730},
+      {city: "Columbia", state: "SC", count: 21, lat: 34.0007, lng: -81.0348},
+      {city: "Oak Island", state: "NC", count: 21, lat: 33.9146, lng: -78.1128},
+      {city: "Hillsborough", state: "NC", count: 21, lat: 36.0754, lng: -79.0978},
+      {city: "Sanford", state: "NC", count: 21, lat: 35.4799, lng: -79.1803},
+      {city: "Kill Devil Hills", state: "NC", count: 20, lat: 36.0307, lng: -75.6760},
+      {city: "Pine Knoll Shores", state: "NC", count: 18, lat: 34.6951, lng: -76.8171},
+      {city: "Fuquay Varina", state: "NC", count: 18, lat: 35.5843, lng: -78.8000},
+      {city: "Surf City", state: "NC", count: 18, lat: 34.4271, lng: -77.5460},
+      {city: "Wrightsville Beach", state: "NC", count: 16, lat: 34.2085, lng: -77.7964},
+      {city: "Sneads Ferry", state: "NC", count: 14, lat: 34.5521, lng: -77.3973},
+      {city: "Jacksonville", state: "FL", count: 17, lat: 30.3322, lng: -81.6557},
+      {city: "Atlanta", state: "GA", count: 15, lat: 33.7490, lng: -84.3880},
+      {city: "Baltimore", state: "MD", count: 14, lat: 39.2904, lng: -76.6122},
+      {city: "Philadelphia", state: "PA", count: 12, lat: 39.9526, lng: -75.1652},
+      {city: "Washington", state: "DC", count: 19, lat: 38.9072, lng: -77.0369},
+      {city: "Carolina Beach", state: "NC", count: 10, lat: 34.0352, lng: -77.8936},
+      {city: "Holly Ridge", state: "NC", count: 7, lat: 34.4954, lng: -77.5545},
+      {city: "Kitty Hawk", state: "NC", count: 11, lat: 36.0646, lng: -75.7057},
+      {city: "Nags Head", state: "NC", count: 8, lat: 35.9574, lng: -75.6241},
+      {city: "Savannah", state: "GA", count: 12, lat: 32.0809, lng: -81.0912},
+      {city: "Tampa", state: "FL", count: 11, lat: 27.9506, lng: -82.4572},
+      {city: "Orlando", state: "FL", count: 10, lat: 28.5383, lng: -81.3792},
+      {city: "Nashville", state: "TN", count: 9, lat: 36.1627, lng: -86.7816},
+      {city: "Chicago", state: "IL", count: 8, lat: 41.8781, lng: -87.6298},
+      {city: "Boston", state: "MA", count: 7, lat: 42.3601, lng: -71.0589},
+      {city: "New York", state: "NY", count: 6, lat: 40.7128, lng: -74.0060},
+      {city: "Dallas", state: "TX", count: 8, lat: 32.7767, lng: -96.7970},
+      {city: "Houston", state: "TX", count: 7, lat: 29.7604, lng: -95.3698},
+      {city: "Denver", state: "CO", count: 6, lat: 39.7392, lng: -104.9903},
+      {city: "Seattle", state: "WA", count: 5, lat: 47.6062, lng: -122.3321},
+      {city: "San Francisco", state: "CA", count: 5, lat: 37.7749, lng: -122.4194},
+      {city: "Los Angeles", state: "CA", count: 6, lat: 34.0522, lng: -118.2437}
+    ];
+    
+    // All states with at least one customer (state centroids)
+    var stateMarkers = [
+      {state: "North Carolina", abbr: "NC", count: 4068, lat: 35.5, lng: -79.5},
+      {state: "Virginia", abbr: "VA", count: 826, lat: 37.5, lng: -78.8},
+      {state: "Maryland", abbr: "MD", count: 482, lat: 39.0, lng: -76.7},
+      {state: "Florida", abbr: "FL", count: 410, lat: 28.5, lng: -82.5},
+      {state: "South Carolina", abbr: "SC", count: 348, lat: 33.8, lng: -80.9},
+      {state: "Pennsylvania", abbr: "PA", count: 212, lat: 40.9, lng: -77.8},
+      {state: "Texas", abbr: "TX", count: 181, lat: 31.5, lng: -99.5},
+      {state: "California", abbr: "CA", count: 176, lat: 37.2, lng: -119.5},
+      {state: "Georgia", abbr: "GA", count: 143, lat: 32.6, lng: -83.4},
+      {state: "New York", abbr: "NY", count: 138, lat: 42.9, lng: -75.5},
+      {state: "Massachusetts", abbr: "MA", count: 136, lat: 42.2, lng: -71.5},
+      {state: "New Jersey", abbr: "NJ", count: 134, lat: 40.1, lng: -74.7},
+      {state: "Ohio", abbr: "OH", count: 134, lat: 40.4, lng: -82.7},
+      {state: "Illinois", abbr: "IL", count: 98, lat: 40.0, lng: -89.2},
+      {state: "Michigan", abbr: "MI", count: 90, lat: 44.3, lng: -85.5},
+      {state: "Tennessee", abbr: "TN", count: 78, lat: 35.8, lng: -86.3},
+      {state: "Connecticut", abbr: "CT", count: 73, lat: 41.6, lng: -72.7},
+      {state: "Washington", abbr: "WA", count: 62, lat: 47.4, lng: -120.5},
+      {state: "Alabama", abbr: "AL", count: 60, lat: 32.7, lng: -86.8},
+      {state: "Delaware", abbr: "DE", count: 51, lat: 39.0, lng: -75.5},
+      {state: "Colorado", abbr: "CO", count: 47, lat: 39.0, lng: -105.5},
+      {state: "Indiana", abbr: "IN", count: 43, lat: 39.9, lng: -86.3},
+      {state: "Wisconsin", abbr: "WI", count: 41, lat: 44.5, lng: -89.8},
+      {state: "Arizona", abbr: "AZ", count: 38, lat: 34.2, lng: -111.6},
+      {state: "Missouri", abbr: "MO", count: 38, lat: 38.3, lng: -92.5},
+      {state: "Louisiana", abbr: "LA", count: 36, lat: 31.0, lng: -92.0},
+      {state: "Oregon", abbr: "OR", count: 28, lat: 43.9, lng: -120.5},
+      {state: "Minnesota", abbr: "MN", count: 28, lat: 46.0, lng: -94.5},
+      {state: "Mississippi", abbr: "MS", count: 25, lat: 32.7, lng: -89.7},
+      {state: "Maine", abbr: "ME", count: 22, lat: 45.3, lng: -69.0},
+      {state: "Kansas", abbr: "KS", count: 22, lat: 38.5, lng: -98.4},
+      {state: "New Hampshire", abbr: "NH", count: 20, lat: 43.7, lng: -71.5},
+      {state: "Rhode Island", abbr: "RI", count: 20, lat: 41.7, lng: -71.5},
+      {state: "Oklahoma", abbr: "OK", count: 20, lat: 35.5, lng: -97.5},
+      {state: "Kentucky", abbr: "KY", count: 19, lat: 37.8, lng: -85.7},
+      {state: "Washington DC", abbr: "DC", count: 19, lat: 38.9, lng: -77.0},
+      {state: "Nevada", abbr: "NV", count: 18, lat: 39.3, lng: -116.6},
+      {state: "West Virginia", abbr: "WV", count: 17, lat: 38.9, lng: -80.5},
+      {state: "Iowa", abbr: "IA", count: 14, lat: 42.0, lng: -93.5},
+      {state: "Utah", abbr: "UT", count: 12, lat: 39.3, lng: -111.7},
+      {state: "Vermont", abbr: "VT", count: 11, lat: 44.0, lng: -72.7},
+      {state: "Idaho", abbr: "ID", count: 11, lat: 44.4, lng: -114.6},
+      {state: "Nebraska", abbr: "NE", count: 9, lat: 41.5, lng: -99.8},
+      {state: "Alaska", abbr: "AK", count: 8, lat: 64.0, lng: -153.0},
+      {state: "New Mexico", abbr: "NM", count: 7, lat: 34.5, lng: -106.0},
+      {state: "Arkansas", abbr: "AR", count: 6, lat: 34.8, lng: -92.4},
+      {state: "Wyoming", abbr: "WY", count: 5, lat: 43.0, lng: -107.5},
+      {state: "Hawaii", abbr: "HI", count: 3, lat: 20.8, lng: -156.3},
+      {state: "Montana", abbr: "MT", count: 2, lat: 46.9, lng: -110.4},
+      {state: "South Dakota", abbr: "SD", count: 1, lat: 44.5, lng: -100.0}
+    ];
+    
+    // Initialize map centered on US
+    var map = L.map('map').setView([39.0, -96.0], 4);
+    
+    // Add tile layer with subtle styling
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+    
+    // Color function based on customer count
+    function getColor(count) {
+      if (count >= 100) return '#e85d4c';  // coral
+      if (count >= 50) return '#d4a853';   // gold
+      if (count >= 20) return '#3eb489';   // seafoam
+      return '#1a3a5c';                     // ocean-mid
+    }
+    
+    // Size function based on customer count
+    function getRadius(count) {
+      if (count >= 100) return 25;
+      if (count >= 50) return 18;
+      if (count >= 20) return 12;
+      if (count >= 10) return 8;
+      return 5;
+    }
+    
+    // Add markers for each location
+    customerLocations.forEach(function(loc) {
+      var marker = L.circleMarker([loc.lat, loc.lng], {
+        radius: getRadius(loc.count),
+        fillColor: getColor(loc.count),
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.85
+      }).addTo(map);
+      
+      marker.bindPopup(
+        '<div class="popup-title">' + loc.city + ', ' + loc.state + '</div>' +
+        '<div class="popup-count">' + loc.count + '</div>' +
+        '<div class="popup-label">customers</div>'
+      );
+      
+      marker.on('mouseover', function() {
+        this.openPopup();
+        this.setStyle({ fillOpacity: 1, weight: 3 });
+      });
+      
+      marker.on('mouseout', function() {
+        this.closePopup();
+        this.setStyle({ fillOpacity: 0.85, weight: 2 });
+      });
+      
+      allMarkers.push(marker);
+    });
+    
+    // Add state-level markers for ALL states with customers
+    function getStateColor(count) {
+      if (count >= 500) return '#e85d4c';   // coral - high
+      if (count >= 100) return '#d4a853';   // gold - medium-high
+      if (count >= 50) return '#3eb489';    // seafoam - medium
+      if (count >= 20) return '#1a3a5c';    // ocean-mid - low-medium
+      return '#6b7c8a';                      // gray - low
+    }
+    
+    function getStateRadius(count) {
+      if (count >= 1000) return 22;
+      if (count >= 500) return 18;
+      if (count >= 100) return 14;
+      if (count >= 50) return 10;
+      if (count >= 20) return 7;
+      return 5;
+    }
+    
+    stateMarkers.forEach(function(loc) {
+      var marker = L.circleMarker([loc.lat, loc.lng], {
+        radius: getStateRadius(loc.count),
+        fillColor: getStateColor(loc.count),
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.7
+      }).addTo(map);
+      
+      marker.bindPopup(
+        '<div class="popup-title">' + loc.state + ' (' + loc.abbr + ')</div>' +
+        '<div class="popup-count">' + loc.count.toLocaleString() + '</div>' +
+        '<div class="popup-label">customers statewide</div>'
+      );
+      
+      marker.on('mouseover', function() {
+        this.openPopup();
+        this.setStyle({ fillOpacity: 0.95, weight: 3 });
+      });
+      
+      marker.on('mouseout', function() {
+        this.closePopup();
+        this.setStyle({ fillOpacity: 0.7, weight: 2 });
+      });
+      
+      allMarkers.push(marker);
+    });
+    
+    // Add a subtle highlight for the Crystal Coast region
+    var crystalCoastBounds = [
+      [34.5, -77.2],
+      [35.2, -76.4]
+    ];
+    
+    crystalCoastRect = L.rectangle(crystalCoastBounds, {
+      color: '#3eb489',
+      weight: 2,
+      fillColor: '#3eb489',
+      fillOpacity: 0.1,
+      dashArray: '5, 5'
+    }).addTo(map).bindPopup('<strong>Crystal Coast</strong><br>Your home base — 550+ customers');
+    
+    // ========== FILE UPLOAD HANDLING ==========
+    
+    function clearAllMarkers() {
+      allMarkers.forEach(function(marker) {
+        map.removeLayer(marker);
+      });
+      allMarkers = [];
+      if (crystalCoastRect) {
+        map.removeLayer(crystalCoastRect);
+        crystalCoastRect = null;
+      }
+    }
+    
+    function normalizeState(state) {
+      if (!state) return '';
+      state = state.toString().toUpperCase().trim();
+      var stateMap = {
+        'NORTH CAROLINA': 'NC', 'VIRGINIA': 'VA', 'NEW JERSEY': 'NJ',
+        'NEW YORK': 'NY', 'MISSISSIPPI': 'MS', 'MISSISSIPP': 'MS',
+        'FLORIDA': 'FL', 'TENNESSEE': 'TN', 'MICHIGAN': 'MI',
+        'LOUISIANA': 'LA', 'N.J.': 'NJ', 'MINNESOTA (MN)': 'MN',
+        'CALIFORNIA': 'CA', 'TEXAS': 'TX', 'GEORGIA': 'GA',
+        'PENNSYLVANIA': 'PA', 'OHIO': 'OH', 'ILLINOIS': 'IL',
+        'MASSACHUSETTS': 'MA', 'WASHINGTON': 'WA', 'COLORADO': 'CO',
+        'ARIZONA': 'AZ', 'CONNECTICUT': 'CT', 'ALABAMA': 'AL',
+        'SOUTH CAROLINA': 'SC', 'MARYLAND': 'MD', 'DELAWARE': 'DE',
+        'INDIANA': 'IN', 'WISCONSIN': 'WI', 'MISSOURI': 'MO',
+        'OREGON': 'OR', 'MINNESOTA': 'MN', 'MAINE': 'ME',
+        'KANSAS': 'KS', 'NEW HAMPSHIRE': 'NH', 'RHODE ISLAND': 'RI',
+        'OKLAHOMA': 'OK', 'KENTUCKY': 'KY', 'NEVADA': 'NV',
+        'WEST VIRGINIA': 'WV', 'IOWA': 'IA', 'UTAH': 'UT',
+        'VERMONT': 'VT', 'IDAHO': 'ID', 'NEBRASKA': 'NE',
+        'ALASKA': 'AK', 'NEW MEXICO': 'NM', 'ARKANSAS': 'AR',
+        'WYOMING': 'WY', 'HAWAII': 'HI', 'MONTANA': 'MT',
+        'SOUTH DAKOTA': 'SD', 'NORTH DAKOTA': 'ND'
+      };
+      return stateMap[state] || state;
+    }
+    
+    function processData(data) {
+      // Aggregate by city/state
+      var cityAgg = {};
+      var stateAgg = {};
+      var totalCustomers = 0;
+      
+      data.forEach(function(row) {
+        var city = (row.City || row.city || row.CITY || '').toString().toUpperCase().trim();
+        var state = normalizeState(row.State || row.state || row.STATE || '');
+        
+        if (!state) return;
+        
+        totalCustomers++;
+        
+        // State aggregation
+        if (!stateAgg[state]) stateAgg[state] = 0;
+        stateAgg[state]++;
+        
+        // City aggregation
+        if (city) {
+          var key = city + ',' + state;
+          if (!cityAgg[key]) cityAgg[key] = { city: city, state: state, count: 0 };
+          cityAgg[key].count++;
+        }
+      });
+      
+      // Convert to arrays and sort
+      var cityData = Object.values(cityAgg).sort(function(a, b) { return b.count - a.count; });
+      var stateData = Object.keys(stateAgg).map(function(st) {
+        return { state: st, count: stateAgg[st] };
+      }).sort(function(a, b) { return b.count - a.count; });
+      
+      return { cities: cityData, states: stateData, total: totalCustomers };
+    }
+    
+    function updateMap(processedData) {
+      clearAllMarkers();
+      
+      var cities = processedData.cities;
+      var states = processedData.states;
+      
+      // Update customer count in header
+      document.getElementById('customerCount').textContent = processedData.total.toLocaleString();
+      
+      // Add city markers (for cities we have coordinates for)
+      cities.forEach(function(loc) {
+        var key = loc.city + ',' + loc.state;
+        var coords = cityCoords[key];
+        
+        if (coords) {
+          var marker = L.circleMarker(coords, {
+            radius: getRadius(loc.count),
+            fillColor: getColor(loc.count),
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.85
+          }).addTo(map);
+          
+          marker.bindPopup(
+            '<div class="popup-title">' + toTitleCase(loc.city) + ', ' + loc.state + '</div>' +
+            '<div class="popup-count">' + loc.count + '</div>' +
+            '<div class="popup-label">customers</div>'
+          );
+          
+          marker.on('mouseover', function() {
+            this.openPopup();
+            this.setStyle({ fillOpacity: 1, weight: 3 });
+          });
+          
+          marker.on('mouseout', function() {
+            this.closePopup();
+            this.setStyle({ fillOpacity: 0.85, weight: 2 });
+          });
+          
+          allMarkers.push(marker);
+        }
+      });
+      
+      // Add state markers
+      states.forEach(function(loc) {
+        var coords = stateCoords[loc.state];
+        if (coords) {
+          var marker = L.circleMarker(coords, {
+            radius: getStateRadius(loc.count),
+            fillColor: getStateColor(loc.count),
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.7
+          }).addTo(map);
+          
+          marker.bindPopup(
+            '<div class="popup-title">' + (stateNames[loc.state] || loc.state) + ' (' + loc.state + ')</div>' +
+            '<div class="popup-count">' + loc.count.toLocaleString() + '</div>' +
+            '<div class="popup-label">customers statewide</div>'
+          );
+          
+          marker.on('mouseover', function() {
+            this.openPopup();
+            this.setStyle({ fillOpacity: 0.95, weight: 3 });
+          });
+          
+          marker.on('mouseout', function() {
+            this.closePopup();
+            this.setStyle({ fillOpacity: 0.7, weight: 2 });
+          });
+          
+          allMarkers.push(marker);
+        }
+      });
+      
+      // Update sidebar stats
+      updateSidebar(processedData);
+    }
+    
+    function toTitleCase(str) {
+      return str.toLowerCase().replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+    
+    function updateSidebar(data) {
+      // Update top cities list
+      var topCitiesHtml = '';
+      data.cities.slice(0, 10).forEach(function(city) {
+        topCitiesHtml += '<li><span class="city-name">' + toTitleCase(city.city) + ', ' + city.state + '</span><span class="city-count">' + city.count + '</span></li>';
+      });
+      document.querySelector('.top-cities').innerHTML = topCitiesHtml;
+      
+      // Update state bars
+      var topStates = data.states.slice(0, 5);
+      var maxCount = topStates[0] ? topStates[0].count : 1;
+      var stateBarsHtml = '';
+      topStates.forEach(function(st, i) {
+        var width = (st.count / maxCount * 100).toFixed(1);
+        var colors = ['#0a1628', '#1a3a5c', '#3eb489', '#e85d4c', '#d4a853'];
+        stateBarsHtml += '<div class="state-bar"><span class="label">' + st.state + '</span><div class="bar-container"><div class="bar" style="width: ' + width + '%; background: ' + colors[i] + ';"></div></div><span class="count">' + st.count.toLocaleString() + '</span></div>';
+      });
+      document.querySelector('.state-bars').innerHTML = stateBarsHtml;
+      
+      // Calculate stats
+      var topState = data.states[0] || { state: 'N/A', count: 0 };
+      var topCity = data.cities[0] || { city: 'N/A', state: '', count: 0 };
+      var seStates = ['NC', 'SC', 'VA', 'GA', 'FL', 'TN', 'AL', 'MS', 'LA'];
+      var seCount = 0;
+      var stateCount = data.states.length;
+      
+      data.states.forEach(function(st) {
+        if (seStates.indexOf(st.state) >= 0) seCount += st.count;
+      });
+      
+      var topStatePct = data.total > 0 ? Math.round(topState.count / data.total * 100) : 0;
+      var sePct = data.total > 0 ? Math.round(seCount / data.total * 100) : 0;
+      
+      // Update stats bar
+      var statsHtml = '<div class="stat"><span class="stat-value">' + data.total.toLocaleString() + '</span><span class="stat-label">Total Customers</span></div>' +
+        '<div class="stat"><span class="stat-value">' + topStatePct + '%</span><span class="stat-label">' + (stateNames[topState.state] || topState.state) + '</span></div>' +
+        '<div class="stat"><span class="stat-value">' + sePct + '%</span><span class="stat-label">Southeast Region</span></div>' +
+        '<div class="stat"><span class="stat-value">' + stateCount + '</span><span class="stat-label">States + DC</span></div>';
+      document.querySelector('.stats-bar').innerHTML = statsHtml;
+      
+      // Update Key Insights
+      var topCityDisplay = toTitleCase(topCity.city) + (topCity.state ? ', ' + topCity.state : '');
+      var secondCity = data.cities[1] || { city: 'N/A', state: '', count: 0 };
+      var thirdCity = data.cities[2] || { city: 'N/A', state: '', count: 0 };
+      
+      var allStatesArr = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+      var presentStates = data.states.map(function(s) { return s.state; });
+      var missingStates = allStatesArr.filter(function(s) { return presentStates.indexOf(s) === -1; });
+      var missingText = missingStates.length === 0 ? 'You have customers in all 50 states + DC!' : 
+                        missingStates.length === 1 ? 'Only ' + (stateNames[missingStates[0]] || missingStates[0]) + ' has zero customers.' :
+                        missingStates.length <= 3 ? 'Missing states: ' + missingStates.map(function(s) { return stateNames[s] || s; }).join(', ') + '.' :
+                        missingStates.length + ' states have zero customers.';
+      
+      var insightsHtml = '<div class="insight-card"><h3>Top Market</h3><p><span class="highlight">' + topCityDisplay + ' has ' + topCity.count.toLocaleString() + ' customers</span> — your single largest market.</p></div>' +
+        '<div class="insight-card"><h3>Home State Dominance</h3><p><span class="highlight">' + (stateNames[topState.state] || topState.state) + ' represents ' + topStatePct + '%</span> of your total customer base with ' + topState.count.toLocaleString() + ' customers.</p></div>' +
+        '<div class="insight-card"><h3>Regional Concentration</h3><p><span class="highlight">' + sePct + '% of customers</span> are in the Southeast region (NC, VA, SC, FL, GA, TN, AL, MS, LA).</p></div>' +
+        '<div class="insight-card"><h3>Geographic Reach</h3><p>You have customers in <span class="highlight">' + stateCount + ' states</span>. ' + missingText + '</p></div>';
+      document.getElementById('keyInsights').innerHTML = insightsHtml;
+      
+      // Update Growth Opportunities
+      var secondState = data.states[1] || { state: 'N/A', count: 0 };
+      var thirdState = data.states[2] || { state: 'N/A', count: 0 };
+      var lowStates = data.states.filter(function(s) { return s.count < 10; });
+      
+      var growthHtml = '<div class="insight-card"><h3>Expand in Top State</h3><p>Your #1 state <span class="highlight">' + (stateNames[topState.state] || topState.state) + ' has ' + topState.count.toLocaleString() + ' customers</span>. Consider targeting nearby cities to strengthen this base.</p></div>' +
+        '<div class="insight-card"><h3>Secondary Markets</h3><p><span class="highlight">' + (stateNames[secondState.state] || secondState.state) + ' (' + secondState.count.toLocaleString() + ') and ' + (stateNames[thirdState.state] || thirdState.state) + ' (' + thirdState.count.toLocaleString() + ')</span> show strong demand. These are prime expansion targets.</p></div>' +
+        '<div class="insight-card"><h3>Untapped Regions</h3><p>' + (lowStates.length > 0 ? '<span class="highlight">' + lowStates.length + ' states have fewer than 10 customers</span>. Consider targeted marketing campaigns.' : '<span class="highlight">Strong coverage across all states!</span> Focus on deepening existing markets.') + '</p></div>';
+      document.getElementById('growthOpportunities').innerHTML = growthHtml;
+    }
+    
+    function parseFile(file) {
+      var loading = document.getElementById('loadingOverlay');
+      loading.classList.add('visible');
+      
+      try {
+        var reader = new FileReader();
+        
+        reader.onerror = function() {
+          loading.classList.remove('visible');
+          alert('Error reading file. Please try again.');
+        };
+        
+        if (file.name.match(/\.csv$/i)) {
+          reader.onload = function(e) {
+            try {
+              var text = e.target.result;
+              var data = parseCSV(text);
+              if (data.length === 0) {
+                alert('No data found in CSV file. Check the format.');
+                loading.classList.remove('visible');
+                return;
+              }
+              var processed = processData(data);
+              updateMap(processed);
+              loading.classList.remove('visible');
+            } catch (err) {
+              loading.classList.remove('visible');
+              alert('Error processing CSV: ' + err.message);
+            }
+          };
+          reader.readAsText(file);
+        } else if (file.name.match(/\.xlsx?$/i)) {
+          reader.onload = function(e) {
+            try {
+              var data = new Uint8Array(e.target.result);
+              var workbook = XLSX.read(data, { type: 'array' });
+              var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+              var jsonData = XLSX.utils.sheet_to_json(firstSheet);
+              if (jsonData.length === 0) {
+                alert('No data found in Excel file. Check the format.');
+                loading.classList.remove('visible');
+                return;
+              }
+              var processed = processData(jsonData);
+              updateMap(processed);
+              loading.classList.remove('visible');
+            } catch (err) {
+              loading.classList.remove('visible');
+              alert('Error processing Excel file: ' + err.message);
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          loading.classList.remove('visible');
+          alert('Please upload a .csv or .xlsx file');
+        }
+      } catch (err) {
+        loading.classList.remove('visible');
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    function parseCSV(text) {
+      var lines = text.split(/\r?\n/);
+      var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^["']|["']$/g, ''); });
+      var data = [];
+      
+      for (var i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        var values = lines[i].split(',').map(function(v) { return v.trim().replace(/^["']|["']$/g, ''); });
+        var row = {};
+        headers.forEach(function(h, j) {
+          row[h] = values[j] || '';
+        });
+        data.push(row);
+      }
+      return data;
+    }
+    
+    // Event listeners
+    document.getElementById('fileUpload').addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        var file = e.target.files[0];
+        console.log('File selected:', file.name, file.size, 'bytes');
+        parseFile(file);
+        e.target.value = '';
+      }
+    });
+    
+    document.getElementById('clearData').addEventListener('click', function() {
+      if (confirm('Clear all customer data from the map?')) {
+        clearAllMarkers();
+        document.getElementById('customerCount').textContent = '0';
+        document.querySelector('.stats-bar').innerHTML = '<div class="stat"><span class="stat-value">0</span><span class="stat-label">Total Customers</span></div>';
+        document.querySelector('.top-cities').innerHTML = '<li><span class="city-name">No data loaded</span></li>';
+        document.querySelector('.state-bars').innerHTML = '<div style="color: #888; font-size: 0.9rem;">Upload a file to see state data</div>';
+        document.getElementById('keyInsights').innerHTML = '<div class="insight-card"><p style="color: #888;">Upload customer data to see insights</p></div>';
+        document.getElementById('growthOpportunities').innerHTML = '<div class="insight-card"><p style="color: #888;">Upload customer data to see opportunities</p></div>';
+      }
+    });
+    
+    document.getElementById('formatHelp').addEventListener('click', function() {
+      document.getElementById('modalOverlay').classList.add('visible');
+    });
+    
+    document.getElementById('closeModal').addEventListener('click', function() {
+      document.getElementById('modalOverlay').classList.remove('visible');
+    });
+    
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) {
+        this.classList.remove('visible');
+      }
+    });
+    }
+    
+    // Dynamically load libraries and initialize map when ready
+    (function() {
+      var xlsxScript = document.createElement('script');
+      xlsxScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      xlsxScript.onload = function() {
+        var leafletScript = document.createElement('script');
+        leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        leafletScript.onload = function() {
+          initMap();
+        };
+        document.head.appendChild(leafletScript);
+      };
+      document.head.appendChild(xlsxScript);
+    })();
+  </script>
+</body>
+</html>
